@@ -191,30 +191,30 @@ func (s *Sudoku) Unmark(row, column int) {
 func (s *Sudoku) Apply(placement Placement) {
 	s.matrix[placement.row][placement.column].possibilities = [9]int{placement.targetDigit}
 	// Remove the possibility of the target number from all digits in the row
-	for i, square := range s.matrix[placement.row] {
-		if i == placement.column {
+	for columnIndex := 0; columnIndex < 9; columnIndex++ {
+		if columnIndex == placement.column {
 			continue
 		}
 
-		possibilities := &square.possibilities
-		for j, possibility := range possibilities {
+		possibilities := &s.matrix[placement.row][columnIndex].possibilities
+		for i, possibility := range possibilities {
 			if possibility == placement.targetDigit {
-				possibilities[j] = 0
+				possibilities[i] = 0
 				break
 			}
 		}
 	}
 
 	// Same here, but now for all squares in the column
-	for i, row := range s.matrix {
-		if i == placement.row {
+	for rowIndex := 0; rowIndex < 9; rowIndex++ {
+		if rowIndex == placement.row {
 			continue
 		}
 
-		possibilities := &row[placement.column].possibilities
-		for j, possibility := range possibilities {
+		possibilities := &s.matrix[rowIndex][placement.column].possibilities
+		for i, possibility := range possibilities {
 			if possibility == placement.targetDigit {
-				possibilities[j] = 0
+				possibilities[i] = 0
 				break
 			}
 		}
