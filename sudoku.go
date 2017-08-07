@@ -21,6 +21,16 @@ type Square struct {
 	marked        bool
 }
 
+func (s Square) AmountOfPossibilities() int {
+	possibilities := 0
+	for _, possibility := range s.possibilities {
+		if possibility != 0 {
+			possibilities++
+		}
+	}
+	return possibilities
+}
+
 // 0 means not taken, otherwise a digit
 func (s Square) Value() int {
 	amountOfDigits := 0
@@ -116,6 +126,23 @@ func (s *Sudoku) Print() {
 	}
 }
 
+// PrintPossibilities prints the amount of possibilities left on each position
+func (s *Sudoku) PrintPossibilities() {
+	for i, row := range s.matrix {
+		if i > 0 && i%3 == 0 { // We print a row divider every 3 rows
+			fmt.Println("---+---+---")
+		}
+
+		for j, square := range row {
+			if j > 0 && j%3 == 0 { // We print a column divider every 3 digits
+				fmt.Print("|")
+			}
+			fmt.Print(square.AmountOfPossibilities())
+		}
+		fmt.Println() // Newline
+	}
+}
+
 // IsPlacementValid tests whether a placement interferes with other digits in the sudoku or not. It's not smart, it just looks at other digits in the row, column and square.
 func (s *Sudoku) IsValid(p Placement) bool {
 	value := s.matrix[p.row][p.column].Value()
@@ -155,30 +182,61 @@ func (s *Sudoku) Mark(row, column int) {
 	s.matrix[row][column].marked = true
 }
 
+// Unmark removes the marking from a square in the sudoku
+func (s *Sudoku) Unmark(row, column int) {
+	s.matrix[row][column].marked = false
+}
+
 // Apply applies a placement. It assumes that the supplied placement is valid
 func (s *Sudoku) Apply(placement Placement) {
-	s.matrix[placement.row][placement.column].possibilities = [9]int{placement.targetDigit, 0, 0, 0, 0, 0, 0, 0, 0}
-
+	s.matrix[placement.row][placement.column].possibilities = [9]int{placement.targetDigit}
 	// Remove the possibility of the target number from all digits in the row
-	for _, square := range s.matrix[placement.row] {
-		for i, possibility := range square.possibilities {
+	for i, square := range s.matrix[placement.row] {
+		if i == placement.column {
+			continue
+		}
+
+		possibilities := &square.possibilities
+		for j, possibility := range possibilities {
 			if possibility == placement.targetDigit {
-				square.possibilities[i] = 0
-				return
+				possibilities[j] = 0
+				break
 			}
 		}
 	}
 
 	// Same here, but now for all squares in the column
-	for _, row := range s.matrix {
-		square := row[placement.column]
-		for i, possibility := range square.possibilities {
+	for i, row := range s.matrix {
+		if i == placement.row {
+			continue
+		}
+
+		possibilities := &row[placement.column].possibilities
+		for j, possibility := range possibilities {
 			if possibility == placement.targetDigit {
-				square.possibilities[i] = 0
-				return
+				possibilities[j] = 0
+				break
 			}
 		}
 	}
 
 	// Same here, but now for all the squares in the current 3x3 square
+	squareRow := placement.row - (placement.row % 3)
+	squareColumn := placement.column - (placement.column % 3)
+
+	for row := squareRow; row < squareRow+3; row++ {
+		for column := squareColumn; column < squareColumn+3; column++ {
+			if row == placement.row && column == placement.column {
+				continue
+			}
+
+			possibilities := &s.matrix[row][column].possibilities
+			for i, possibility := range possibilities {
+				if possibility == placement.targetDigit {
+					possibilities[i] = 0
+					break
+				}
+			}
+		}
+	}
 }
