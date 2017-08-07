@@ -2,11 +2,101 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Sudoku contains the (un)finished sudoku
 type Sudoku struct {
-	matrix [9][9]int // 0 means not filled in, 10 means marked, 1-9 is a digit
+	matrix [9][9]Square
+}
+
+// Placement is a struct that contains information about a placement (row, column, digit)
+type Placement struct {
+	row, column, targetDigit int
+}
+
+// Square is the thing a sudoku consists of. There are 81 of them in a sudoku
+type Square struct {
+	possibilities [9]int
+	marked        bool
+}
+
+// 0 means not taken, otherwise a digit
+func (s Square) Value() int {
+	amountOfDigits := 0
+	lastDigit := 0
+	for _, digit := range s.possibilities {
+		if digit != 0 {
+			amountOfDigits++
+			lastDigit = digit
+		}
+	}
+
+	if amountOfDigits == 1 {
+		return lastDigit
+	} else if amountOfDigits > 1 {
+		return 0
+	}
+
+	panic("no digits left when trying to get value")
+}
+
+func (s Square) ToString() string {
+	if s.marked {
+		return "*"
+	}
+
+	digit := s.Value()
+
+	if digit != 0 {
+		return strconv.Itoa(digit)
+	}
+	return "#"
+}
+
+// NewSudoku creates a Sudoku from 2D integer array. 0 means not filled in, 1-9 means a digit.
+func NewSudoku(matrix [9][9]int) *Sudoku {
+	var sudoku Sudoku
+
+	// These are the placements we're going to make when the sudoku is initialized.
+	initialPlacements := make([]Placement, 0)
+
+	// Initialize the sudoku.
+	// With that I mean that we fill the sudoku.matrix with unmarked squared that still have all possibilities open
+	// (so [1, 2, 3, 4, 5, 6, 7, 8, 9])
+	for row := 0; row < 9; row++ {
+		for column := 0; column < 9; column++ {
+			square := Square{
+				possibilities: [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				marked:        false,
+			}
+			sudoku.matrix[row][column] = square
+
+			// If there's a value in the passed matrix, we add that to the initialPlacements.
+			value := matrix[row][column]
+			if value != 0 {
+				initialPlacements = append(
+					initialPlacements,
+					Placement{
+						row:         row,
+						column:      column,
+						targetDigit: value,
+					},
+				)
+			}
+		}
+	}
+
+	// Now we're going to apply the placements.
+	for _, placement := range initialPlacements {
+		if !sudoku.IsValid(placement) {
+			panic("The supplies sudoku isn't valid (has a collision somewhere)")
+		}
+
+		sudoku.Apply(placement)
+	}
+
+	return &sudoku
 }
 
 // Print prints the sudoku in pretty form
@@ -16,49 +106,42 @@ func (s *Sudoku) Print() {
 			fmt.Println("---+---+---")
 		}
 
-		for j, digit := range row {
+		for j, square := range row {
 			if j > 0 && j%3 == 0 { // We print a column divider every 3 digits
 				fmt.Print("|")
 			}
-
-			switch digit {
-			case 0: // not filled in yet
-				fmt.Print("#")
-			case 10: // marking
-				fmt.Print("*")
-			default:
-				fmt.Print(digit)
-			}
+			fmt.Print(square.ToString())
 		}
 		fmt.Println() // Newline
 	}
 }
 
 // IsPlacementValid tests whether a placement interferes with other digits in the sudoku or not. It's not smart, it just looks at other digits in the row, column and square.
-func (s *Sudoku) IsPlacementValid(rowIndex, columnIndex, targetDigit int) bool {
-	currentValue := s.matrix[rowIndex][columnIndex]
-	if currentValue >= 1 && currentValue <= 9 { // Already taken
+func (s *Sudoku) IsValid(p Placement) bool {
+	value := s.matrix[p.row][p.column].Value()
+	if value >= 1 && value <= 9 { // Already taken
 		return false
 	}
-	for _, valueDigit := range s.matrix[rowIndex] {
-		if valueDigit == targetDigit { // Digit already used in row
+	for _, square := range s.matrix[p.row] {
+		if square.Value() == p.targetDigit { // Digit already used in row
 			return false
 		}
 	}
 
 	for _, row := range s.matrix {
-		if row[columnIndex] == targetDigit { // Digit already used in column
+		if row[p.column].Value() == p.targetDigit { // Digit already used in column
 			return false
 		}
 	}
 
 	// This is the upper left corner of the square the target is in
-	squareRow := rowIndex - (rowIndex % 3)
-	squareColumn := columnIndex - (columnIndex % 3)
+	// With square I mean the 3x3 square, not the struct with the name `Square`
+	squareRow := p.row - (p.row % 3)
+	squareColumn := p.column - (p.column % 3)
 
 	for testRow := squareRow; testRow < squareRow+3; testRow++ {
 		for testColumn := squareColumn; testColumn < squareColumn+3; testColumn++ {
-			if s.matrix[testRow][testColumn] == targetDigit { // Target already in square
+			if s.matrix[testRow][testColumn].Value() == p.targetDigit { // Target already in square
 				return false
 			}
 		}
@@ -69,5 +152,33 @@ func (s *Sudoku) IsPlacementValid(rowIndex, columnIndex, targetDigit int) bool {
 
 // Mark marks a place on the sudoku so you can visualize a point on the sudoku when you call sudoku.Print()
 func (s *Sudoku) Mark(row, column int) {
-	s.matrix[row][column] = 10
+	s.matrix[row][column].marked = true
+}
+
+// Apply applies a placement. It assumes that the supplied placement is valid
+func (s *Sudoku) Apply(placement Placement) {
+	s.matrix[placement.row][placement.column].possibilities = [9]int{placement.targetDigit, 0, 0, 0, 0, 0, 0, 0, 0}
+
+	// Remove the possibility of the target number from all digits in the row
+	for _, square := range s.matrix[placement.row] {
+		for i, possibility := range square.possibilities {
+			if possibility == placement.targetDigit {
+				square.possibilities[i] = 0
+				return
+			}
+		}
+	}
+
+	// Same here, but now for all squares in the column
+	for _, row := range s.matrix {
+		square := row[placement.column]
+		for i, possibility := range square.possibilities {
+			if possibility == placement.targetDigit {
+				square.possibilities[i] = 0
+				return
+			}
+		}
+	}
+
+	// Same here, but now for all the squares in the current 3x3 square
 }
