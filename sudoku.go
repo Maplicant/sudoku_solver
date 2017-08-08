@@ -21,6 +21,106 @@ type Square struct {
 	marked        bool
 }
 
+func (s *Sudoku) Deduct() {
+	for rowIndex := 0; rowIndex < 9; rowIndex++ {
+		for columnIndex := 0; columnIndex < 9; columnIndex++ {
+			square := s.matrix[rowIndex][columnIndex]
+			if square.Value() != 0 {
+				continue
+			}
+		possibilities:
+			for _, possibility := range square.possibilities {
+				// Check the row
+			outerrow:
+				for {
+					for otherColumnIndex, otherSquare := range s.matrix[rowIndex] {
+						if otherColumnIndex == columnIndex {
+							continue
+						}
+
+						if Contains(otherSquare.possibilities, possibility) {
+							break outerrow
+						}
+					}
+					placement := Placement{
+						row:         rowIndex,
+						column:      columnIndex,
+						targetDigit: possibility,
+					}
+					(*s).Apply(placement)
+					break possibilities
+				}
+
+				// Check the column
+			outercolumn:
+				for {
+					for otherRowIndex, otherRow := range s.matrix {
+						if otherRowIndex == rowIndex {
+							continue
+						}
+						if Contains(otherRow[columnIndex].possibilities, possibility) {
+							break outercolumn
+						}
+					}
+					placement := Placement{
+						row:         rowIndex,
+						column:      columnIndex,
+						targetDigit: possibility,
+					}
+					(*s).Apply(placement)
+					break possibilities
+				}
+
+				// Check the 3x3 square
+			outersquare:
+				for {
+					squareRow := rowIndex - (rowIndex % 3)
+					squareColumn := columnIndex - (columnIndex % 3)
+
+					for otherRowIndex := squareRow; otherRowIndex < squareRow+3; otherRowIndex++ {
+						for otherColumnIndex := squareColumn; otherColumnIndex < squareColumn+3; otherColumnIndex++ {
+							if otherRowIndex == rowIndex && otherColumnIndex == columnIndex {
+								continue
+							}
+							if Contains(s.matrix[otherRowIndex][otherColumnIndex].possibilities, possibility) { // Target already in square
+								break outersquare
+							}
+						}
+					}
+
+					placement := Placement{
+						row:         rowIndex,
+						column:      columnIndex,
+						targetDigit: possibility,
+					}
+					(*s).Apply(placement)
+					break possibilities
+				}
+			}
+		}
+	}
+}
+
+func Contains(arr [9]int, n int) bool {
+	for _, i := range arr {
+		if i == n {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Sudoku) IsFinished() bool {
+	for _, row := range s.matrix {
+		for _, square := range row {
+			if square.Value() == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (s Square) AmountOfPossibilities() int {
 	possibilities := 0
 	for _, possibility := range s.possibilities {
@@ -48,7 +148,7 @@ func (s Square) Value() int {
 		return 0
 	}
 
-	panic("no digits left when trying to get value")
+	panic(fmt.Sprintf("no digits left when trying to get value", s))
 }
 
 func (s Square) ToString() string {
@@ -111,6 +211,7 @@ func NewSudoku(matrix [9][9]int) *Sudoku {
 
 // Print prints the sudoku in pretty form
 func (s *Sudoku) Print() {
+	// fmt.Println(s.matrix)
 	for i, row := range s.matrix {
 		if i > 0 && i%3 == 0 { // We print a row divider every 3 rows
 			fmt.Println("---+---+---")
@@ -120,7 +221,9 @@ func (s *Sudoku) Print() {
 			if j > 0 && j%3 == 0 { // We print a column divider every 3 digits
 				fmt.Print("|")
 			}
+			// fmt.Println("\n", i, j)
 			fmt.Print(square.ToString())
+			// fmt.Println("done")
 		}
 		fmt.Println() // Newline
 	}

@@ -20,11 +20,14 @@ func main() {
 	)
 
 	// I forgot how to write unit tests and don't have StackOverflow ready, this is my temp solution
-	sudoku.Mark(3, 4)
-	sudoku.PrintPossibilities()
 	fmt.Println(sudoku.IsValid(Placement{3, 4, 6})) // Should be invalid
 	fmt.Println(sudoku.IsValid(Placement{3, 4, 5})) // Should be invalid
-	fmt.Println(sudoku.IsValid(Placement{3, 4, 4})) // Should be valid
+	fmt.Println(sudoku.IsValid(Placement{3, 4, 3})) // Should be valid
 	fmt.Println(sudoku.IsValid(Placement{3, 4, 9})) // Should be invalid
+
+	for !sudoku.IsFinished() {
+		sudoku.Deduct()
+	}
+
 	sudoku.Print()
 }
