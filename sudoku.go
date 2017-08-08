@@ -21,6 +21,7 @@ type Square struct {
 	marked        bool
 }
 
+// Deduct tries to find values of squares purely by deducting from other squares
 func (s *Sudoku) Deduct() {
 	for rowIndex := 0; rowIndex < 9; rowIndex++ {
 		for columnIndex := 0; columnIndex < 9; columnIndex++ {
@@ -101,6 +102,8 @@ func (s *Sudoku) Deduct() {
 	}
 }
 
+// Contains checks whether an array contains a certain integer.
+// I'm sure there's something in the standard library, but I don't have any documentation at the moment
 func Contains(arr [9]int, n int) bool {
 	for _, i := range arr {
 		if i == n {
@@ -110,6 +113,7 @@ func Contains(arr [9]int, n int) bool {
 	return false
 }
 
+// IsFinished checks whether a sudoku is finished
 func (s *Sudoku) IsFinished() bool {
 	for _, row := range s.matrix {
 		for _, square := range row {
@@ -121,6 +125,7 @@ func (s *Sudoku) IsFinished() bool {
 	return true
 }
 
+// Amount of possibilities checks how many possibilities there are left for a certain square
 func (s Square) AmountOfPossibilities() int {
 	possibilities := 0
 	for _, possibility := range s.possibilities {
@@ -131,7 +136,7 @@ func (s Square) AmountOfPossibilities() int {
 	return possibilities
 }
 
-// 0 means not taken, otherwise a digit
+// Value gives you the value of a square. 0 means not taken, otherwise you get a digit
 func (s Square) Value() int {
 	amountOfDigits := 0
 	lastDigit := 0
@@ -151,6 +156,7 @@ func (s Square) Value() int {
 	panic(fmt.Sprintf("no digits left when trying to get value", s))
 }
 
+// ToString converts a square to a string (# for not taken, 1-9 for a digit, * for a marked square)
 func (s Square) ToString() string {
 	if s.marked {
 		return "*"
@@ -246,7 +252,7 @@ func (s *Sudoku) PrintPossibilities() {
 	}
 }
 
-// IsPlacementValid tests whether a placement interferes with other digits in the sudoku or not. It's not smart, it just looks at other digits in the row, column and square.
+// IsValid tests whether a placement interferes with other digits in the sudoku or not. It's not smart, it just looks at other digits in the row, column and square.
 func (s *Sudoku) IsValid(p Placement) bool {
 	value := s.matrix[p.row][p.column].Value()
 	if value >= 1 && value <= 9 { // Already taken

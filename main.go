@@ -33,7 +33,7 @@ func main() {
 		},
 	)
 
-	// I forgot how to write unit tests and don't have StackOverflow ready, this is my temp solution
+	// I forgot how to write unit tests and don't have StackOverflow ready because I don't have any internet, this is my temp solution
 	fmt.Println(easySudoku.IsValid(Placement{3, 4, 6})) // Should be invalid
 	fmt.Println(easySudoku.IsValid(Placement{3, 4, 5})) // Should be invalid
 	fmt.Println(easySudoku.IsValid(Placement{3, 4, 3})) // Should be valid
