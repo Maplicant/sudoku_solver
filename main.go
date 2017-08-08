@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	sudoku := NewSudoku(
+	easySudoku := NewSudoku(
 		[9][9]int{
 			[9]int{0, 0, 0, 0, 8, 0, 7, 0, 0},
 			[9]int{0, 7, 8, 3, 0, 0, 5, 2, 0},
@@ -19,15 +19,39 @@ func main() {
 		},
 	)
 
+	hardSudoku := NewSudoku(
+		[9][9]int{
+			[9]int{3, 0, 5, 0, 0, 0, 8, 0, 6},
+			[9]int{0, 7, 0, 0, 0, 0, 0, 2, 0},
+			[9]int{0, 1, 0, 3, 0, 6, 0, 9, 0},
+			[9]int{0, 0, 9, 0, 7, 0, 3, 0, 0},
+			[9]int{0, 0, 0, 9, 8, 5, 0, 0, 0},
+			[9]int{0, 0, 0, 0, 4, 0, 0, 0, 0},
+			[9]int{7, 0, 0, 0, 0, 0, 0, 0, 4},
+			[9]int{0, 8, 2, 0, 0, 0, 7, 6, 0},
+			[9]int{9, 0, 3, 0, 0, 0, 2, 0, 8},
+		},
+	)
+
 	// I forgot how to write unit tests and don't have StackOverflow ready, this is my temp solution
-	fmt.Println(sudoku.IsValid(Placement{3, 4, 6})) // Should be invalid
-	fmt.Println(sudoku.IsValid(Placement{3, 4, 5})) // Should be invalid
-	fmt.Println(sudoku.IsValid(Placement{3, 4, 3})) // Should be valid
-	fmt.Println(sudoku.IsValid(Placement{3, 4, 9})) // Should be invalid
+	fmt.Println(easySudoku.IsValid(Placement{3, 4, 6})) // Should be invalid
+	fmt.Println(easySudoku.IsValid(Placement{3, 4, 5})) // Should be invalid
+	fmt.Println(easySudoku.IsValid(Placement{3, 4, 3})) // Should be valid
+	fmt.Println(easySudoku.IsValid(Placement{3, 4, 9})) // Should be invalid
 
-	for !sudoku.IsFinished() {
-		sudoku.Deduct()
+	// Works
+	fmt.Println("Easy:")
+	for !easySudoku.IsFinished() {
+		easySudoku.Deduct()
 	}
+	easySudoku.Print()
 
-	sudoku.Print()
+	// Doesn't work yet
+	fmt.Println("Hard:")
+	for !hardSudoku.IsFinished() {
+		hardSudoku.Deduct()
+		hardSudoku.Print()
+		fmt.Println("---------")
+	}
+	hardSudoku.Print()
 }
