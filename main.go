@@ -4,83 +4,78 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 func main() {
-	// easySudoku := NewSudoku(
-	// 	[9][9]int{
-	// 		[9]int{0, 0, 0, 0, 8, 0, 7, 0, 0},
-	// 		[9]int{0, 7, 8, 3, 0, 0, 5, 2, 0},
-	// 		[9]int{4, 1, 5, 0, 0, 0, 3, 8, 0},
-	// 		[9]int{0, 0, 0, 6, 0, 5, 0, 1, 0},
-	// 		[9]int{8, 0, 0, 0, 0, 0, 0, 0, 7},
-	// 		[9]int{0, 3, 0, 8, 0, 2, 0, 0, 0},
-	// 		[9]int{0, 9, 7, 0, 0, 0, 4, 3, 2},
-	// 		[9]int{0, 2, 3, 0, 0, 4, 6, 9, 0},
-	// 		[9]int{0, 0, 4, 0, 9, 0, 0, 0, 0},
-	// 	},
-	// )
-
-	// hardSudoku := NewSudoku(
-	// 	[9][9]int{
-	// 		[9]int{3, 0, 5, 0, 0, 0, 8, 0, 6},
-	// 		[9]int{0, 7, 0, 0, 0, 0, 0, 2, 0},
-	// 		[9]int{0, 1, 0, 3, 0, 6, 0, 9, 0},
-	// 		[9]int{0, 0, 9, 0, 7, 0, 3, 0, 0},
-	// 		[9]int{0, 0, 0, 9, 8, 5, 0, 0, 0},
-	// 		[9]int{0, 0, 0, 0, 4, 0, 0, 0, 0},
-	// 		[9]int{7, 0, 0, 0, 0, 0, 0, 0, 4},
-	// 		[9]int{0, 8, 2, 0, 0, 0, 7, 6, 0},
-	// 		[9]int{9, 0, 3, 0, 0, 0, 2, 0, 8},
-	// 	},
-	// )
-
-	// // I forgot how to write unit tests and don't have StackOverflow ready because I don't have any internet, this is my temp solution
-	// fmt.Println(easySudoku.IsValid(Placement{3, 4, 6})) // Should be invalid
-	// fmt.Println(easySudoku.IsValid(Placement{3, 4, 5})) // Should be invalid
-	// fmt.Println(easySudoku.IsValid(Placement{3, 4, 3})) // Should be valid
-	// fmt.Println(easySudoku.IsValid(Placement{3, 4, 9})) // Should be invalid
-
-	// // Works
-	// fmt.Println("Easy:")
-	// easySudoku.Solve()
-	// easySudoku.Print()
-
-	// // Doesn't work yet
-	// fmt.Println("Hard:")
-	// hardSudoku.Solve()
-	// hardSudoku.Print()
 	sudoku := ReadSudoku(os.Stdin)
 	sudoku.Print()
+	fmt.Println("")
 	fmt.Println("Solving...")
+	fmt.Println("")
+	begin := time.Now()
 	sudoku.Solve()
+	timediff := time.Now().Sub(begin)
 	sudoku.Print()
+	fmt.Printf("\nSolved in %dms\n", timediff.Nanoseconds()/1000000)
 }
 
+// ReadSudoku reads a sudoku from `r`
 func ReadSudoku(r io.Reader) *Sudoku {
-	input := make([]byte, 90)
+	input := make([]byte, 200)
+	nums := make([]int, 0)
 	offset := 0
-	for i := 0; i < 9; i++ {
+outer:
+	for {
 		amount_read, err := r.Read(input[offset:])
+		if err == io.EOF {
+			// Only continue if the user entered numbers in the line
+			for _, bt := range input[offset:] {
+				num := bt - 48
+				if num >= 10 {
+					continue
+				}
+				if num == 35 {
+					num = 0
+				}
+				nums = append(nums, int(num))
+			}
+			offset += amount_read
+
+			if len(nums) > 81 {
+				break outer
+			} else {
+				panic(fmt.Sprintf("EOF but not enough numbers, got", len(nums)))
+			}
+		}
 		if err != nil {
 			panic(err)
 		}
+
+		// Only continue if the user entered numbers in the line
+		for _, bt := range input[offset:] {
+			num := bt - 48
+			if bt == 35 {
+				num = 0
+			}
+			if num >= 10 {
+				continue
+			}
+			nums = append(nums, int(num))
+		}
 		offset += amount_read
+
+		if len(nums) >= 81 {
+			break outer
+		}
 	}
 
 	matrix := [9][9]int{}
 
 	row := 0
 	column := 0
-	for _, bt := range input {
-		num := bt - 48
-		if num >= 10 {
-			continue
-		}
-		if num == 35 {
-			num = 0
-		}
-		matrix[row][column] = int(num)
+	for _, num := range nums {
+		matrix[row][column] = num
 		column += 1
 		if column > 8 {
 			row += 1
@@ -88,6 +83,5 @@ func ReadSudoku(r io.Reader) *Sudoku {
 		}
 	}
 
-	fmt.Println(matrix)
 	return NewSudoku(matrix)
 }

@@ -125,8 +125,8 @@ func (s *Sudoku) Solve() {
 				break
 			}
 		}
-		fmt.Println("Done deducting")
-		s.Print()
+		// fmt.Println("Done deducting")
+		// s.Print()
 
 		if s.IsFinished() {
 			break
@@ -303,13 +303,7 @@ func NewSudoku(matrix [9][9]int) *Sudoku {
 		}
 
 		sudoku.Apply(placement)
-		sudoku.PrintPossibilities()
-		for ri, row := range sudoku.matrix {
-			for ci, square := range row {
-				fmt.Println(ri, ci, square.possibilities)
-			}
-		}
-		fmt.Println()
+		// sudoku.PrintPossibilities()
 	}
 
 	return &sudoku
@@ -317,7 +311,6 @@ func NewSudoku(matrix [9][9]int) *Sudoku {
 
 // Print prints the sudoku in pretty form
 func (s *Sudoku) Print() {
-	// fmt.Println(s.matrix)
 	for i, row := range s.matrix {
 		if i > 0 && i%3 == 0 { // We print a row divider every 3 rows
 			fmt.Println("---+---+---")
