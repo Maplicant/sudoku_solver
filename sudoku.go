@@ -21,12 +21,24 @@ type Square struct {
 	marked        bool
 }
 
+type Error struct {
+	errorString string
+}
+
+func (e Error) Error() string {
+	return e.errorString
+}
+
 // Deduct tries to find values of squares purely by deducting from other squares
-func (s *Sudoku) Deduct() {
+func (s *Sudoku) Deduct() error {
 	for rowIndex := 0; rowIndex < 9; rowIndex++ {
 		for columnIndex := 0; columnIndex < 9; columnIndex++ {
 			square := s.matrix[rowIndex][columnIndex]
-			if square.Value() != 0 {
+			n, err := square.Value()
+			if err != nil {
+				return err
+			}
+			if n != 0 {
 				continue
 			}
 		possibilities:
@@ -100,6 +112,81 @@ func (s *Sudoku) Deduct() {
 			}
 		}
 	}
+
+	return nil
+}
+
+func (s *Sudoku) Solve() {
+	for {
+		// Deduct as much as we can
+		for {
+			oldsudoku := *s
+			err := s.Deduct()
+			if err != nil {
+				fmt.Println("what is going on while deducting in Solve")
+				s.Print()
+				panic("")
+			}
+			if oldsudoku == *s {
+				break
+			}
+		}
+
+		if s.IsFinished() {
+			break
+		}
+
+		rowToTry, columnToTry := s.FindSquareToTry()
+		sudokus := make(chan Sudoku, 2)
+		for _, possibility := range s.matrix[rowToTry][columnToTry].possibilities {
+			if possibility < 1 {
+				continue
+			}
+			placement := Placement{
+				rowToTry, columnToTry, possibility,
+			}
+			go s.Try(placement, sudokus)
+		}
+
+		*s = <-sudokus
+	}
+}
+
+func (ins *Sudoku) Try(placement Placement, solutions chan Sudoku) {
+	s := *ins
+	s.Apply(placement)
+	for {
+		oldsudoku := s
+		err := s.Deduct()
+		if err != nil {
+			return
+		}
+		if s.IsFinished() {
+			solutions <- s
+			return
+		}
+		if oldsudoku == s {
+			break
+		}
+	}
+	solutions <- s
+}
+
+func (s *Sudoku) FindSquareToTry() (int, int) {
+	rowIndex, columnIndex := 0, 0
+	lowestPossibilities := 10
+
+	for potentialRowIndex, row := range s.matrix {
+		for potentialColumnIndex, square := range row {
+			possibilities := square.AmountOfPossibilities()
+			if possibilities != 1 && possibilities < lowestPossibilities {
+				lowestPossibilities = possibilities
+				rowIndex, columnIndex = potentialRowIndex, potentialColumnIndex
+			}
+		}
+	}
+
+	return rowIndex, columnIndex
 }
 
 // Contains checks whether an array contains a certain integer.
@@ -117,7 +204,11 @@ func Contains(arr [9]int, n int) bool {
 func (s *Sudoku) IsFinished() bool {
 	for _, row := range s.matrix {
 		for _, square := range row {
-			if square.Value() == 0 {
+			n, err := square.Value()
+			if err != nil {
+				panic(err)
+			}
+			if n == 0 {
 				return false
 			}
 		}
@@ -137,7 +228,7 @@ func (s Square) AmountOfPossibilities() int {
 }
 
 // Value gives you the value of a square. 0 means not taken, otherwise you get a digit
-func (s Square) Value() int {
+func (s Square) Value() (int, error) {
 	amountOfDigits := 0
 	lastDigit := 0
 	for _, digit := range s.possibilities {
@@ -148,12 +239,12 @@ func (s Square) Value() int {
 	}
 
 	if amountOfDigits == 1 {
-		return lastDigit
+		return lastDigit, nil
 	} else if amountOfDigits > 1 {
-		return 0
+		return 0, nil
 	}
 
-	panic(fmt.Sprintf("no digits left when trying to get value", s))
+	return 0, Error{fmt.Sprintf("no digits left when trying to get value", s)}
 }
 
 // ToString converts a square to a string (# for not taken, 1-9 for a digit, * for a marked square)
@@ -162,7 +253,10 @@ func (s Square) ToString() string {
 		return "*"
 	}
 
-	digit := s.Value()
+	digit, err := s.Value()
+	if err != nil {
+		panic(err)
+	}
 
 	if digit != 0 {
 		return strconv.Itoa(digit)
@@ -254,18 +348,29 @@ func (s *Sudoku) PrintPossibilities() {
 
 // IsValid tests whether a placement interferes with other digits in the sudoku or not. It's not smart, it just looks at other digits in the row, column and square.
 func (s *Sudoku) IsValid(p Placement) bool {
-	value := s.matrix[p.row][p.column].Value()
+	value, err := s.matrix[p.row][p.column].Value()
+	if err != nil {
+		panic(err)
+	}
 	if value >= 1 && value <= 9 { // Already taken
 		return false
 	}
 	for _, square := range s.matrix[p.row] {
-		if square.Value() == p.targetDigit { // Digit already used in row
+		n, err := square.Value()
+		if err != nil {
+			panic(err)
+		}
+		if n == p.targetDigit { // Digit already used in row
 			return false
 		}
 	}
 
 	for _, row := range s.matrix {
-		if row[p.column].Value() == p.targetDigit { // Digit already used in column
+		n, err := row[p.column].Value()
+		if err != nil {
+			panic(err)
+		}
+		if n == p.targetDigit { // Digit already used in column
 			return false
 		}
 	}
@@ -277,7 +382,11 @@ func (s *Sudoku) IsValid(p Placement) bool {
 
 	for testRow := squareRow; testRow < squareRow+3; testRow++ {
 		for testColumn := squareColumn; testColumn < squareColumn+3; testColumn++ {
-			if s.matrix[testRow][testColumn].Value() == p.targetDigit { // Target already in square
+			n, err := s.matrix[testRow][testColumn].Value()
+			if err != nil {
+				panic(err)
+			}
+			if n == p.targetDigit { // Target already in square
 				return false
 			}
 		}

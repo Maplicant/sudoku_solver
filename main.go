@@ -41,17 +41,11 @@ func main() {
 
 	// Works
 	fmt.Println("Easy:")
-	for !easySudoku.IsFinished() {
-		easySudoku.Deduct()
-	}
+	easySudoku.Solve()
 	easySudoku.Print()
 
 	// Doesn't work yet
 	fmt.Println("Hard:")
-	for !hardSudoku.IsFinished() {
-		hardSudoku.Deduct()
-		hardSudoku.Print()
-		fmt.Println("---------")
-	}
+	hardSudoku.Solve()
 	hardSudoku.Print()
 }
