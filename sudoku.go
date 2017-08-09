@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -19,14 +20,6 @@ type Placement struct {
 type Square struct {
 	possibilities [9]int
 	marked        bool
-}
-
-type Error struct {
-	errorString string
-}
-
-func (e Error) Error() string {
-	return e.errorString
 }
 
 // Deduct tries to find values of squares purely by deducting from other squares
@@ -116,6 +109,7 @@ func (s *Sudoku) Deduct() error {
 	return nil
 }
 
+// Solve solves a sudoku using deducting as much as possible and trying different placements when needed
 func (s *Sudoku) Solve() {
 	for {
 		// Deduct as much as we can
@@ -131,6 +125,8 @@ func (s *Sudoku) Solve() {
 				break
 			}
 		}
+		fmt.Println("Done deducting")
+		s.Print()
 
 		if s.IsFinished() {
 			break
@@ -152,7 +148,9 @@ func (s *Sudoku) Solve() {
 	}
 }
 
+// Try tries a placement to see whether it collides when you try to deduct it further.
 func (ins *Sudoku) Try(placement Placement, solutions chan Sudoku) {
+	// TODO: Think forward more
 	s := *ins
 	s.Apply(placement)
 	for {
@@ -172,6 +170,7 @@ func (ins *Sudoku) Try(placement Placement, solutions chan Sudoku) {
 	solutions <- s
 }
 
+// FindSquareToTry finds the coordinates of the square with the least amount of possibilities to try.
 func (s *Sudoku) FindSquareToTry() (int, int) {
 	rowIndex, columnIndex := 0, 0
 	lowestPossibilities := 10
@@ -244,7 +243,7 @@ func (s Square) Value() (int, error) {
 		return 0, nil
 	}
 
-	return 0, Error{fmt.Sprintf("no digits left when trying to get value", s)}
+	return 0, errors.New(fmt.Sprintf("no digits left when trying to get value", s))
 }
 
 // ToString converts a square to a string (# for not taken, 1-9 for a digit, * for a marked square)
@@ -304,6 +303,13 @@ func NewSudoku(matrix [9][9]int) *Sudoku {
 		}
 
 		sudoku.Apply(placement)
+		sudoku.PrintPossibilities()
+		for ri, row := range sudoku.matrix {
+			for ci, square := range row {
+				fmt.Println(ri, ci, square.possibilities)
+			}
+		}
+		fmt.Println()
 	}
 
 	return &sudoku
@@ -352,10 +358,13 @@ func (s *Sudoku) IsValid(p Placement) bool {
 	if err != nil {
 		panic(err)
 	}
-	if value >= 1 && value <= 9 { // Already taken
+	if value >= 1 && value <= 9 && !(value == p.targetDigit) { // Already taken with a number that's not the target digit
 		return false
 	}
-	for _, square := range s.matrix[p.row] {
+	for columnIndex, square := range s.matrix[p.row] {
+		if columnIndex == p.column {
+			continue
+		}
 		n, err := square.Value()
 		if err != nil {
 			panic(err)
@@ -365,7 +374,10 @@ func (s *Sudoku) IsValid(p Placement) bool {
 		}
 	}
 
-	for _, row := range s.matrix {
+	for rowIndex, row := range s.matrix {
+		if rowIndex == p.row {
+			continue
+		}
 		n, err := row[p.column].Value()
 		if err != nil {
 			panic(err)
@@ -382,6 +394,9 @@ func (s *Sudoku) IsValid(p Placement) bool {
 
 	for testRow := squareRow; testRow < squareRow+3; testRow++ {
 		for testColumn := squareColumn; testColumn < squareColumn+3; testColumn++ {
+			if testRow == p.row && testColumn == p.column {
+				continue
+			}
 			n, err := s.matrix[testRow][testColumn].Value()
 			if err != nil {
 				panic(err)
